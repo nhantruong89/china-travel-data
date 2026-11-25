@@ -80,3 +80,11 @@ def test_next_version(tmp_path):
     assert next_version(tmp_path, "a", "20261201") == "20261201.1"
     (tmp_path / "a-20261201.1.zip").write_bytes(b"")
     assert next_version(tmp_path, "a", "20261201") == "20261201.2"
+
+
+def test_planetiler_command_downloads_and_caches_sources(tmp_path):
+    from pipeline.pack import TOOLS, planetiler_command
+    cmd = planetiler_command(tmp_path / "c.pbf", (1.0, 2.0, 3.0, 4.0), tmp_path / "m.mbtiles")
+    assert "--download" in cmd
+    assert f"--download_dir={TOOLS / 'sources'}" in cmd
+    assert "--bounds=1.0,2.0,3.0,4.0" in cmd

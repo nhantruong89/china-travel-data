@@ -39,14 +39,20 @@ def osmium_extract(source_pbf: Path, bbox, out_pbf: Path) -> None:
     )
 
 
+def planetiler_command(city_pbf: Path, bbox, out_mbtiles: Path) -> list[str]:
+    # --download: lấy các lớp nền (nước, hồ, Natural Earth) mà schema OpenMapTiles cần;
+    # lưu ở TOOLS/sources để các lần dựng sau dùng lại.
+    return [
+        "java", "-Xmx6g", "-jar", str(TOOLS / "planetiler.jar"),
+        f"--osm-path={city_pbf}", f"--bounds={_bbox_arg(bbox)}", f"--output={out_mbtiles}",
+        "--maxzoom=14", "--languages=zh,en", "--force",
+        "--download", f"--download_dir={TOOLS / 'sources'}",
+        f"--tmpdir={out_mbtiles.parent / 'planetiler-tmp'}",
+    ]
+
+
 def planetiler_tiles(city_pbf: Path, bbox, out_mbtiles: Path) -> None:
-    jar = TOOLS / "planetiler.jar"
-    subprocess.run(
-        ["java", "-Xmx6g", "-jar", str(jar), f"--osm-path={city_pbf}", f"--bounds={_bbox_arg(bbox)}",
-         f"--output={out_mbtiles}", "--maxzoom=14", "--languages=zh,en", "--force",
-         f"--tmpdir={out_mbtiles.parent / 'planetiler-tmp'}"],
-        check=True,
-    )
+    subprocess.run(planetiler_command(city_pbf, bbox, out_mbtiles), check=True)
 
 
 def next_version(out_dir: Path, slug: str, day: str) -> str:
