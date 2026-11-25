@@ -47,7 +47,7 @@ jobs:
           [ -f planetiler.jar ] || curl -fL --retry 3 -o planetiler.jar \
             https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar
       - name: Build and validate packs
-        run: python -m pipeline.cli build cities/*.yaml --pbf ~/.cache/china-travel/china-latest.osm.pbf --out dist
+        run: python -m pipeline.cli build cities/*.yaml --pbf ~/.cache/china-travel/china-latest.osm.pbf --out dist --version-suffix ${{ github.run_number }}
       - name: Build catalog
         run: python -m pipeline.cli catalog dist
       - name: Pack sizes
@@ -59,4 +59,6 @@ jobs:
         run: |
           gh release view packs >/dev/null 2>&1 || gh release create packs --title "Offline city packs" \
             --notes "Map and place packs per city. Data © OpenStreetMap contributors, ODbL."
-          gh release upload packs dist/*.zip dist/catalog.json --clobber
+          # gói trước, catalog sau cùng: app không bao giờ thấy catalog trỏ tới gói chưa đăng
+          gh release upload packs dist/*.zip --clobber
+          gh release upload packs dist/catalog.json --clobber

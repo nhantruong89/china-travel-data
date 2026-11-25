@@ -28,7 +28,8 @@ def cmd_build(args) -> int:
     failed = False
     for cfg in args.cities:
         city = load_city(Path(cfg))
-        version = next_version(Path(args.out), city.slug, day)
+        # CI: mỗi lần chạy một số riêng (github.run_number) để không ghi đè gói đã phát hành trong cùng ngày
+        version = f"{day}.{args.version_suffix}" if args.version_suffix else next_version(Path(args.out), city.slug, day)
         print(f"Đang dựng {city.slug} {version} …", flush=True)
         z = build_pack(city, Path(args.pbf), Path(args.out), version)
         errors = validate_pack(z, city, max_mb=args.max_mb)
@@ -67,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--pbf", required=True)
     b.add_argument("--out", default="dist")
     b.add_argument("--max-mb", type=int, default=400)
+    b.add_argument("--version-suffix", help="số tăng dần (vd github.run_number) → phiên bản YYYYMMDD.<số>")
     b.set_defaults(func=cmd_build)
     c = sub.add_parser("catalog", help="dựng catalog.json từ các gói mới nhất trong thư mục")
     c.add_argument("dist")
