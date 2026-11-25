@@ -1,0 +1,11 @@
+# Thêm thành phố mới: sao chép file này, đổi các giá trị, mở pull request.
+slug: suzhou
+name_vi: Tô Châu
+name_zh: 苏州
+name_en: Suzhou
+region: shanghai-region
+region_name_vi: Thượng Hải & phụ cận
+# min_lon, min_lat, max_lon, max_lat (WGS-84)
+bbox: [120.45, 31.15, 120.85, 31.45]
+has_metro: true
+min_places: 200

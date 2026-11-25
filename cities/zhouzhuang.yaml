@@ -1,0 +1,11 @@
+# Thêm thành phố mới: sao chép file này, đổi các giá trị, mở pull request.
+slug: zhouzhuang
+name_vi: Chu Trang
+name_zh: 周庄
+name_en: Zhouzhuang
+region: shanghai-region
+region_name_vi: Thượng Hải & phụ cận
+# min_lon, min_lat, max_lon, max_lat (WGS-84)
+bbox: [120.82, 31.10, 120.88, 31.14]
+has_metro: false
+min_places: 30

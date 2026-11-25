@@ -1,0 +1,11 @@
+# Thêm thành phố mới: sao chép file này, đổi các giá trị, mở pull request.
+slug: hangzhou
+name_vi: Hàng Châu
+name_zh: 杭州
+name_en: Hangzhou
+region: shanghai-region
+region_name_vi: Thượng Hải & phụ cận
+# min_lon, min_lat, max_lon, max_lat (WGS-84)
+bbox: [119.95, 30.15, 120.35, 30.40]
+has_metro: true
+min_places: 200

@@ -1,0 +1,62 @@
+name: Build offline city packs
+
+on:
+  push:
+    branches: [main]
+    paths: ["cities/**", "pipeline/**", ".github/workflows/build-packs.yml"]
+  pull_request:
+    paths: ["cities/**", "pipeline/**"]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 9 1 * *"   # monthly refresh from new OpenStreetMap data
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-packs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21" }
+      - name: Install osmium-tool
+        run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+      - run: pip install -r requirements.txt
+      - name: Tests
+        run: python -m pytest -q
+      - name: Cache OpenStreetMap China extract
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/china-travel
+          key: osm-china-${{ github.run_id }}
+          restore-keys: osm-china-
+      - name: Download data and Planetiler
+        run: |
+          mkdir -p ~/.cache/china-travel && cd ~/.cache/china-travel
+          if [ ! -f china-latest.osm.pbf ] || [ -n "$(find china-latest.osm.pbf -mtime +7)" ]; then
+            curl -fL --retry 3 -o china-latest.osm.pbf https://download.geofabrik.de/asia/china-latest.osm.pbf
+          fi
+          [ -f planetiler.jar ] || curl -fL --retry 3 -o planetiler.jar \
+            https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar
+      - name: Build and validate packs
+        run: python -m pipeline.cli build cities/*.yaml --pbf ~/.cache/china-travel/china-latest.osm.pbf --out dist
+      - name: Build catalog
+        run: python -m pipeline.cli catalog dist
+      - name: Pack sizes
+        run: ls -lh dist >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish to release "packs"
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view packs >/dev/null 2>&1 || gh release create packs --title "Offline city packs" \
+            --notes "Map and place packs per city. Data © OpenStreetMap contributors, ODbL."
+          gh release upload packs dist/*.zip dist/catalog.json --clobber

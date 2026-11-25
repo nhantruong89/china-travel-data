@@ -1,0 +1,11 @@
+# Thêm thành phố mới: sao chép file này, đổi các giá trị, mở pull request.
+slug: shanghai
+name_vi: Thượng Hải (gồm Chu Gia Giác)
+name_zh: 上海
+name_en: Shanghai
+region: shanghai-region
+region_name_vi: Thượng Hải & phụ cận
+# min_lon, min_lat, max_lon, max_lat (WGS-84)
+bbox: [120.85, 30.67, 122.00, 31.88]
+has_metro: true
+min_places: 200

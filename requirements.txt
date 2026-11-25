@@ -1,0 +1,4 @@
+pyyaml>=6
+pytest>=8
+pypinyin>=0.51
+osmium>=3.7

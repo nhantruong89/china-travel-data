@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="test">
+  <node id="1" lat="31.2400" lon="121.4900" version="1"><tag k="amenity" v="restaurant"/><tag k="name" v="南翔馒头店"/><tag k="name:en" v="Nanxiang Bun Shop"/><tag k="addr:city" v="上海市"/><tag k="addr:street" v="豫园路"/><tag k="addr:housenumber" v="85"/></node>
+  <node id="2" lat="31.2300" lon="121.4700" version="1"><tag k="tourism" v="hotel"/><tag k="name:zh" v="和平饭店"/><tag k="name" v="Peace Hotel"/></node>
+  <node id="3" lat="31.2350" lon="121.4800" version="1"><tag k="amenity" v="restaurant"/></node>
+  <node id="4" lat="21.0278" lon="105.8342" version="1"><tag k="tourism" v="museum"/><tag k="name" v="外地博物馆"/></node>
+  <node id="10" lat="31.2000" lon="121.4000" version="1"/>
+  <node id="11" lat="31.2000" lon="121.4100" version="1"/>
+  <node id="12" lat="31.2100" lon="121.4100" version="1"/>
+  <node id="13" lat="31.2100" lon="121.4000" version="1"/>
+  <way id="100" version="1"><nd ref="10"/><nd ref="11"/><nd ref="12"/><nd ref="13"/><nd ref="10"/><tag k="tourism" v="museum"/><tag k="name" v="上海博物馆"/><tag k="name:en" v="Shanghai Museum"/></way>
+</osm>
