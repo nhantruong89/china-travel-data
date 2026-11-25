@@ -8,4 +8,4 @@ region_name_vi: Thượng Hải & phụ cận
 # min_lon, min_lat, max_lon, max_lat (WGS-84)
 bbox: [120.82, 31.10, 120.88, 31.14]
 has_metro: false
-min_places: 30
+min_places: 10  # thị trấn nhỏ: OSM chỉ có ~11 địa điểm (11/2026)
