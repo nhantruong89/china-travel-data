@@ -66,6 +66,9 @@ def report(net: dict, pairs: list[tuple[str, str]]) -> list[str]:
     out.append(f"cạnh < 0,3 km: {len(short)}")
     no_hv = [s["name_zh"] for s in net["stations"] if not s.get("hanviet")]
     out.append(f"ga thiếu Hán-Việt: {len(no_hv)} {no_hv[:15]}")
+    import re
+    partial = [s["hanviet"] for s in net["stations"] if s.get("hanviet") and re.search(r"[\u3400-\u9fff]", s["hanviet"])]
+    out.append(f"Hán-Việt còn chữ Hán: {len(partial)} {partial[:15]}")
     out.append(f"ga thiếu tên Anh: {sum(1 for s in net['stations'] if not s.get('name_en'))}")
     for a, b in pairs:
         if a in by_zh and b in by_zh:

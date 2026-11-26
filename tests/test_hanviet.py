@@ -43,3 +43,35 @@ def test_places_db_has_hanviet_and_searchable(tmp_path):
     assert con.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone() == ("2",)
     hit = con.execute("SELECT rowid FROM places_fts WHERE places_fts MATCH ?", ('"du"* "vien"*',)).fetchall()
     assert hit == [(1,)]
+
+
+FIX = Path(__file__).parent / "fixtures"
+
+
+def test_simplified_char_borrows_traditional_reading():
+    # 馆 (giản thể) không có kVietnamese; 館 (phồn thể) có "quán".
+    table = load_unihan(FIX / "unihan_trad_mini.txt", variants=FIX / "unihan_variants_mini.txt")
+    assert table["馆"] == "quán"
+    assert table["华"] == "hoa"
+    assert table["館"] == "quán"
+
+
+def test_own_reading_wins_over_traditional():
+    readings = FIX / "unihan_mini.txt"
+    table = load_unihan(readings, variants=FIX / "unihan_variants_mini.txt")
+    assert table["滩"] == "than"
+    assert len(table) == 7, "phồn thể không có trong tệp âm đọc thì không thêm gì"
+
+
+def test_extra_readings_fill_only_missing():
+    table = load_unihan(FIX / "unihan_mini.txt", extra={"北": "bắc", "外": "SAI"})
+    assert table["北"] == "bắc"
+    assert table["外"] == "ngoại"
+
+
+def test_extra_readings_cover_metro_station_gaps():
+    from pipeline.hanviet import EXTRA_READINGS
+    table = load_unihan(FIX / "unihan_mini.txt", extra=EXTRA_READINGS)
+    for name, want in {"张华浜": "Trương Hoa Banh", "龙华": "Long Hoa", "马陆": "Mã Lục", "赵巷": "Triệu Hạng",
+                       "北蔡": "Bắc Thái", "颛桥": "Chuyên Kiều", "北桥": "Bắc Kiều", "菉葭": "Lục Gia", "夏桥": "Hạ Kiều"}.items():
+        assert to_hanviet(name, table) == want, name
