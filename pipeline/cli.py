@@ -14,7 +14,8 @@ from pathlib import Path
 import functools
 
 from .catalog import build_catalog
-from .hanviet import load_unihan
+from .hanviet import load_unihan, to_hanviet
+from .metro import build_metro
 from .places import extract_places
 from .config import load_city
 from .pack import build_pack, next_version, read_manifest, sha256_file, validate_pack
@@ -34,12 +35,14 @@ def cmd_build(args) -> int:
     if args.unihan and table is None:
         print(f"  CẢNH BÁO: không thấy {args.unihan} — gói sẽ không có âm Hán-Việt", file=sys.stderr)
     places_extractor = functools.partial(extract_places, hanviet_table=table)
+    metro_builder = functools.partial(build_metro, hanviet=(lambda t: to_hanviet(t, table)) if table else None)
     for cfg in args.cities:
         city = load_city(Path(cfg))
         # CI: mỗi lần chạy một số riêng (github.run_number) để không ghi đè gói đã phát hành trong cùng ngày
         version = f"{day}.{args.version_suffix}" if args.version_suffix else next_version(Path(args.out), city.slug, day)
         print(f"Đang dựng {city.slug} {version} …", flush=True)
-        z = build_pack(city, Path(args.pbf), Path(args.out), version, places_extractor=places_extractor)
+        z = build_pack(city, Path(args.pbf), Path(args.out), version, places_extractor=places_extractor,
+                       metro_builder=metro_builder)
         errors = validate_pack(z, city, max_mb=args.max_mb)
         size_mb = z.stat().st_size / (1 << 20)
         if errors:
@@ -48,7 +51,9 @@ def cmd_build(args) -> int:
                 print(f"  LỖI: {e}", file=sys.stderr)
             z.rename(z.with_suffix(".zip.invalid"))
         else:
-            print(f"  ĐẠT: {z.name} ({size_mb:.1f} MB, {read_manifest(z)['place_count']} địa điểm)")
+            m = read_manifest(z)
+            metro = f", {m['metro_station_count']} ga metro" if m.get("metro_station_count") else ""
+            print(f"  ĐẠT: {z.name} ({size_mb:.1f} MB, {m['place_count']} địa điểm{metro})")
     return 1 if failed else 0
 
 

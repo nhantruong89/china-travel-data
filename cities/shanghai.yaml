@@ -9,3 +9,15 @@ region_name_vi: Thượng Hải & phụ cận
 bbox: [120.85, 30.67, 122.00, 31.88]
 has_metro: true
 min_places: 200
+# Ít nhất chừng này ga, nếu không coi là dữ liệu OSM thiếu (Thượng Hải có ~500 ga).
+min_metro_stations: 300
+# Giá vé theo quãng đường, áp dụng từ 01/12/2026 (không gồm tàu đệm từ, đường sắt Kim Sơn, tuyến sân bay):
+# 3 tệ cho 0–4 km; rồi +1 tệ sau mỗi 4, 4, 4, 7, 7, 10, 10 km; trên 50 km cứ 15 km +1 tệ.
+metro_fare:
+  base_yuan: 3
+  base_km: 4
+  steps_km: [4, 4, 4, 7, 7, 10, 10]
+  then_every_km: 15
+  effective: "2026-12-01"
+  excluded_lines_zh: ["磁浮", "金山铁路", "机场联络线"]
+  source: "https://fgw.sh.gov.cn/fgw_jjjctk/20261123/f57b63885c514c829ee269ed589ab2b9.html"

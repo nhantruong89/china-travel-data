@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="test">
+  <!-- Tuyến 1: 富锦路 (A) → 人民广场 (B) → 莘庄 (C); đường ray A→B cong (đi vòng lên phía bắc) -->
+  <node id="1" lat="31.2000" lon="121.4000"><tag k="public_transport" v="stop_position"/><tag k="name" v="富锦路"/><tag k="name:en" v="Fujin Road"/></node>
+  <node id="2" lat="31.2000" lon="121.4500"><tag k="public_transport" v="stop_position"/><tag k="name" v="人民广场站"/><tag k="name:en" v="People's Square"/></node>
+  <node id="3" lat="31.2000" lon="121.5000"><tag k="public_transport" v="stop_position"/><tag k="name" v="莘庄"/><tag k="name:en" v="Xinzhuang"/></node>
+  <node id="10" lat="31.2200" lon="121.4250"/>
+  <way id="100"><nd ref="1"/><nd ref="10"/><nd ref="2"/><tag k="railway" v="subway"/></way>
+  <way id="101"><nd ref="2"/><nd ref="3"/><tag k="railway" v="subway"/></way>
+  <relation id="1000">
+    <member type="node" ref="1" role="stop"/><member type="node" ref="2" role="stop"/><member type="node" ref="3" role="stop"/>
+    <member type="way" ref="100" role=""/><member type="way" ref="101" role=""/>
+    <tag k="type" v="route"/><tag k="route" v="subway"/><tag k="ref" v="1"/><tag k="colour" v="#E3002B"/>
+    <tag k="name" v="上海地铁1号线：富锦路 =&gt; 莘庄"/>
+  </relation>
+  <relation id="1001">
+    <member type="node" ref="3" role="stop"/><member type="node" ref="2" role="stop"/><member type="node" ref="1" role="stop"/>
+    <member type="way" ref="101" role=""/><member type="way" ref="100" role=""/>
+    <tag k="type" v="route"/><tag k="route" v="subway"/><tag k="ref" v="1"/><tag k="colour" v="#E3002B"/>
+  </relation>
+  <!-- Tuyến 2: 龙阳路 (D) → 人民广场 (B', vị trí dừng khác của cùng ga) → 虹桥 (E) -->
+  <node id="4" lat="31.1800" lon="121.4500"><tag k="public_transport" v="stop_position"/><tag k="name" v="龙阳路"/></node>
+  <node id="5" lat="31.2005" lon="121.4502"><tag k="public_transport" v="stop_position"/><tag k="name" v="人民广场"/></node>
+  <node id="6" lat="31.2200" lon="121.4500"><tag k="public_transport" v="stop_position"/><tag k="name" v="虹桥"/></node>
+  <way id="200"><nd ref="4"/><nd ref="5"/><nd ref="6"/><tag k="railway" v="subway"/></way>
+  <relation id="2000">
+    <member type="node" ref="4" role="stop_entry_only"/><member type="node" ref="5" role="stop"/><member type="node" ref="6" role="stop_exit_only"/>
+    <member type="way" ref="200" role=""/>
+    <tag k="type" v="route"/><tag k="route" v="subway"/><tag k="ref" v="2"/><tag k="colour" v="#8CC220"/>
+  </relation>
+  <relation id="2001">
+    <member type="node" ref="6" role="stop"/><member type="node" ref="5" role="stop"/><member type="node" ref="4" role="stop"/>
+    <member type="way" ref="200" role=""/>
+    <tag k="type" v="route"/><tag k="route" v="subway"/><tag k="ref" v="2"/>
+  </relation>
+  <!-- Tàu hoả thường: không lấy -->
+  <relation id="3000">
+    <member type="node" ref="1" role="stop"/><member type="node" ref="3" role="stop"/>
+    <tag k="type" v="route"/><tag k="route" v="train"/><tag k="ref" v="G1"/>
+  </relation>
+</osm>

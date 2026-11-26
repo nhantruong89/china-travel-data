@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths: ["cities/**", "pipeline/**", ".github/workflows/build-packs.yml"]
   pull_request:
-    paths: ["cities/**", "pipeline/**"]
+    paths: ["cities/**", "pipeline/**", ".github/workflows/build-packs.yml"]
   workflow_dispatch:
   schedule:
     - cron: "17 9 1 * *"   # monthly refresh from new OpenStreetMap data
@@ -56,6 +56,19 @@ jobs:
         run: python -m pipeline.cli catalog dist
       - name: Pack sizes
         run: ls -lh dist >> "$GITHUB_STEP_SUMMARY"
+      - name: Metro networks for review
+        run: |
+          mkdir -p review
+          for z in dist/*.zip; do
+            unzip -p "$z" metro.json > "review/$(basename "$z" .zip)-metro.json" 2>/dev/null || rm -f "review/$(basename "$z" .zip)-metro.json"
+          done
+          ls -l review >> "$GITHUB_STEP_SUMMARY" || true
+          for f in review/*-metro.json; do python -m pipeline.metro_report "$f"; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metro-review
+          path: review/
+          if-no-files-found: ignore
       - name: Publish to release "packs"
         if: github.event_name != 'pull_request'
         env:
