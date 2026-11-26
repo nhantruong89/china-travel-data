@@ -15,12 +15,19 @@ from typing import Callable, Literal
 
 from .hanviet import fold, to_hanviet
 
-Kind = Literal["eat", "see", "stay"]
+Kind = Literal["eat", "see", "stay", "transit", "shop", "service"]
 
 EAT_AMENITY = {"restaurant", "cafe", "fast_food", "food_court", "bar", "pub", "ice_cream"}
 SEE_TOURISM = {"attraction", "museum", "viewpoint", "gallery", "zoo", "theme_park", "artwork"}
 SEE_LEISURE = {"park", "garden"}
 STAY_TOURISM = {"hotel", "hostel", "guest_house", "motel", "apartment"}
+TRANSIT_RAILWAY = {"station", "halt"}
+TRANSIT_AMENITY = {"bus_station", "ferry_terminal"}
+TRANSIT_AEROWAY = {"aerodrome", "terminal"}
+SHOP_SHOP = {"mall", "department_store", "supermarket", "convenience"}
+SERVICE_AMENITY = {"hospital", "clinic", "pharmacy", "toilets", "atm", "bank", "police"}
+# Tên mặc định khi đối tượng không có tên (nhà vệ sinh, ATM rất hay không đặt tên trên OSM).
+DEFAULT_NAMES = {"toilets": "公共厕所", "atm": "ATM"}
 ADDRESS_KEYS = ("addr:city", "addr:district", "addr:street", "addr:housenumber")
 
 SCHEMA_VERSION = "2"  # 2: thêm cột hanviet
@@ -44,8 +51,17 @@ class Place:
 
 
 def classify(tags: dict[str, str]) -> Kind | None:
-    if tags.get("amenity") in EAT_AMENITY:
+    amenity = tags.get("amenity")
+    if amenity in EAT_AMENITY:
         return "eat"
+    if (tags.get("railway") in TRANSIT_RAILWAY or tags.get("station") == "subway"
+            or tags.get("public_transport") == "station" or amenity in TRANSIT_AMENITY
+            or tags.get("aeroway") in TRANSIT_AEROWAY):
+        return "transit"
+    if tags.get("shop") in SHOP_SHOP or amenity == "marketplace":
+        return "shop"
+    if amenity in SERVICE_AMENITY:
+        return "service"
     tourism = tags.get("tourism")
     if tourism in STAY_TOURISM:
         return "stay"
@@ -69,7 +85,11 @@ def place_from_tags(
         return None
     name_zh = tags.get("name:zh-Hans") or tags.get("name:zh") or tags.get("name")
     if not name_zh:
-        return None
+        default = DEFAULT_NAMES.get(tags.get("amenity", ""))
+        if not default:
+            return None
+        operator = tags.get("operator")
+        name_zh = f"{operator} {default}" if operator and default == "ATM" else default
     address = " ".join(tags[k] for k in ADDRESS_KEYS if tags.get(k))
     return Place(
         osm_id=osm_id,
@@ -94,12 +114,22 @@ def extract_places(osm_path: Path, bbox, hanviet_table: dict[str, str] | None = 
     import osmium
 
     places: dict[str, Place] = {}
-    fp = osmium.FileProcessor(str(osm_path)).with_locations()
+    fp = osmium.FileProcessor(str(osm_path)).with_locations().with_areas()
     for obj in fp:
         tags = dict(obj.tags)
         if classify(tags) is None:
             continue
-        if obj.is_node():
+        if obj.is_area():
+            # vùng từ way đóng đã được xử lý ở nhánh way; chỉ lấy vùng dựng từ quan hệ (multipolygon)
+            if obj.from_way():
+                continue
+            pts = [(n.lat, n.lon) for ring in obj.outer_rings() for n in ring if n.location.valid()]
+            if not pts:
+                continue
+            lat = sum(p[0] for p in pts) / len(pts)
+            lon = sum(p[1] for p in pts) / len(pts)
+            oid = f"r{obj.orig_id()}"
+        elif obj.is_node():
             if not obj.location.valid():
                 continue
             lat, lon, oid = obj.location.lat, obj.location.lon, f"n{obj.id}"
@@ -111,7 +141,7 @@ def extract_places(osm_path: Path, bbox, hanviet_table: dict[str, str] | None = 
             lon = sum(p[1] for p in pts) / len(pts)
             oid = f"w{obj.id}"
         else:
-            continue  # relation/area: bỏ qua ở bản đầu (way đã cover phần lớn)
+            continue  # relation thô (đã xử lý qua area)
         if not _inside(lat, lon, bbox):
             continue
         hv = (lambda name: to_hanviet(name, hanviet_table)) if hanviet_table else None

@@ -75,3 +75,37 @@ def test_fts_search(tmp_path):
     assert search("bund") == ["外滩"]
     assert search("豫") == ["豫园"]
     assert con.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone() == ("2",)
+
+
+def test_classify_wider_categories():
+    assert classify({"railway": "station"}) == "transit"
+    assert classify({"station": "subway", "public_transport": "station"}) == "transit"
+    assert classify({"amenity": "bus_station"}) == "transit"
+    assert classify({"aeroway": "aerodrome"}) == "transit"
+    assert classify({"shop": "mall"}) == "shop"
+    assert classify({"shop": "supermarket"}) == "shop"
+    assert classify({"shop": "convenience"}) == "shop"
+    assert classify({"amenity": "marketplace"}) == "shop"
+    assert classify({"amenity": "hospital"}) == "service"
+    assert classify({"amenity": "pharmacy"}) == "service"
+    assert classify({"amenity": "toilets"}) == "service"
+    assert classify({"amenity": "atm"}) == "service"
+    assert classify({"railway": "subway_entrance"}) is None
+    assert classify({"shop": "bakery"}) is None
+
+
+def test_unnamed_toilets_and_atm_get_default_name():
+    t = place_from_tags("n7", {"amenity": "toilets"}, 31.2, 121.4, pinyin=lambda s: "py")
+    a = place_from_tags("n8", {"amenity": "atm", "operator": "中国银行"}, 31.2, 121.4, pinyin=lambda s: "py")
+    assert t is not None and t.name_zh == "公共厕所" and t.kind == "service"
+    assert a is not None and a.name_zh == "中国银行 ATM"
+    assert place_from_tags("n9", {"amenity": "hospital"}, 31.2, 121.4, pinyin=str) is None
+
+
+def test_extract_multipolygon_relation():
+    pytest.importorskip("osmium")
+    pytest.importorskip("pypinyin")
+    from pipeline.places import extract_places
+    places = extract_places(Path(__file__).parent / "fixtures" / "mini_area.osm", (121.0, 31.0, 122.0, 32.0))
+    assert [(p.osm_id, p.name_zh, p.kind) for p in places] == [("r300", "来福士广场", "shop")]
+    assert 31.23 < places[0].lat < 31.24 and 121.47 < places[0].lon < 121.48
