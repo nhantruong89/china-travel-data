@@ -31,6 +31,11 @@ def haversine_km(a: tuple[float, float], b: tuple[float, float]) -> float:
 
 def station_key(name: str) -> str:
     n = re.sub(r"\s+", "", name)
+    if n.endswith("站站"):
+        return n[:-1]
+    # Tên ga xe lửa: 虹桥火车站, 上海南站, 杭州东站 — "站" là một phần tên, giữ lại.
+    if re.search(r"(火车|[东南西北])站$", n):
+        return n
     return n[:-1] if n.endswith("站") and len(n) > 1 else n
 
 

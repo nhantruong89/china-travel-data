@@ -13,6 +13,14 @@ def test_station_key_ignores_station_suffix_and_spaces():
     assert station_key("人民广场站") == station_key(" 人民广场 ") == "人民广场"
 
 
+def test_station_key_keeps_railway_station_names():
+    # "火车站" là một phần tên ga (ga xe lửa), không phải hậu tố "站" của ga metro.
+    assert station_key("虹桥火车站") == "虹桥火车站"
+    assert station_key("上海火车站站") == "上海火车站"
+    assert station_key("上海南站") == "上海南站"
+    assert station_key("上海南站站") == "上海南站"
+
+
 def test_chain_ways_orients_and_joins():
     a = [(0.0, 0.0), (0.0, 1.0)]
     b = [(0.0, 2.0), (0.0, 1.0)]  # ngược chiều
