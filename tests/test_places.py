@@ -74,4 +74,4 @@ def test_fts_search(tmp_path):
     assert search("wai") == ["外滩"]
     assert search("bund") == ["外滩"]
     assert search("豫") == ["豫园"]
-    assert con.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone() == ("1",)
+    assert con.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone() == ("2",)

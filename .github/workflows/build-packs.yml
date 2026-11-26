@@ -44,10 +44,14 @@ jobs:
           if [ ! -f china-latest.osm.pbf ] || [ -n "$(find china-latest.osm.pbf -mtime +7)" ]; then
             curl -fL --retry 3 -o china-latest.osm.pbf https://download.geofabrik.de/asia/china-latest.osm.pbf
           fi
+          if [ ! -f Unihan_Readings.txt ]; then
+            curl -fL --retry 3 -o Unihan.zip https://www.unicode.org/Public/UCD/latest/ucd/Unihan.zip
+            unzip -o -q Unihan.zip Unihan_Readings.txt
+          fi
           [ -f planetiler.jar ] || curl -fL --retry 3 -o planetiler.jar \
             https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar
       - name: Build and validate packs
-        run: python -m pipeline.cli build cities/*.yaml --pbf ~/.cache/china-travel/china-latest.osm.pbf --out dist --version-suffix ${{ github.run_number }}
+        run: python -m pipeline.cli build cities/*.yaml --pbf ~/.cache/china-travel/china-latest.osm.pbf --out dist --version-suffix ${{ github.run_number }} --unihan ~/.cache/china-travel/Unihan_Readings.txt
       - name: Build catalog
         run: python -m pipeline.cli catalog dist
       - name: Pack sizes

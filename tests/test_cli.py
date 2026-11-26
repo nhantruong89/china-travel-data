@@ -26,7 +26,7 @@ def test_build_uses_version_suffix(tmp_path, monkeypatch):
     import pipeline.cli as cli
     from pipeline.cli import main
     calls = []
-    monkeypatch.setattr(cli, "build_pack", lambda city, pbf, out, version: calls.append(version) or (_fake_zip(out, city.slug, version)))
+    monkeypatch.setattr(cli, "build_pack", lambda city, pbf, out, version, **kw: calls.append(version) or (_fake_zip(out, city.slug, version)))
     monkeypatch.setattr(cli, "validate_pack", lambda z, city, max_mb: [])
     monkeypatch.setattr(cli, "read_manifest", lambda z: {"place_count": 1})
     from pathlib import Path

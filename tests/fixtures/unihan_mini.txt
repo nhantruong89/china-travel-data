@@ -1,0 +1,9 @@
+# Unihan_Readings.txt (trích)
+U+5916	kVietnamese	ngoại
+U+6EE9	kVietnamese	than
+U+8C6B	kVietnamese	dự
+U+56ED	kVietnamese	viên
+U+5929	kVietnamese	thiên
+U+9152	kVietnamese	tửu
+U+5E97	kVietnamese	điếm
+U+5929	kMandarin	tiān

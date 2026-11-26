@@ -13,6 +13,8 @@ from dataclasses import astuple, dataclass
 from pathlib import Path
 from typing import Callable, Literal
 
+from .hanviet import fold, to_hanviet
+
 Kind = Literal["eat", "see", "stay"]
 
 EAT_AMENITY = {"restaurant", "cafe", "fast_food", "food_court", "bar", "pub", "ice_cream"}
@@ -21,7 +23,7 @@ SEE_LEISURE = {"park", "garden"}
 STAY_TOURISM = {"hotel", "hostel", "guest_house", "motel", "apartment"}
 ADDRESS_KEYS = ("addr:city", "addr:district", "addr:street", "addr:housenumber")
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"  # 2: thêm cột hanviet
 QUERY_CONVENTION = "cjk: chars space-separated as phrase; latin: prefix tokens"
 
 _CJK = re.compile(r"[㐀-鿿豈-﫿]")
@@ -38,6 +40,7 @@ class Place:
     lon: float
     address_zh: str | None
     tags_json: str
+    hanviet: str | None = None
 
 
 def classify(tags: dict[str, str]) -> Kind | None:
@@ -58,7 +61,8 @@ def to_pinyin(text: str) -> str:
 
 
 def place_from_tags(
-    osm_id: str, tags: dict[str, str], lat: float, lon: float, pinyin: Callable[[str], str] = to_pinyin
+    osm_id: str, tags: dict[str, str], lat: float, lon: float, pinyin: Callable[[str], str] = to_pinyin,
+    hanviet: Callable[[str], str | None] | None = None,
 ) -> Place | None:
     kind = classify(tags)
     if kind is None:
@@ -77,6 +81,7 @@ def place_from_tags(
         lon=lon,
         address_zh=address or None,
         tags_json=json.dumps(tags, ensure_ascii=False, sort_keys=True),
+        hanviet=hanviet(name_zh) if hanviet else None,
     )
 
 
@@ -85,7 +90,7 @@ def _inside(lat: float, lon: float, bbox) -> bool:
     return min_lon <= lon <= max_lon and min_lat <= lat <= max_lat
 
 
-def extract_places(osm_path: Path, bbox) -> list[Place]:
+def extract_places(osm_path: Path, bbox, hanviet_table: dict[str, str] | None = None) -> list[Place]:
     import osmium
 
     places: dict[str, Place] = {}
@@ -109,7 +114,8 @@ def extract_places(osm_path: Path, bbox) -> list[Place]:
             continue  # relation/area: bỏ qua ở bản đầu (way đã cover phần lớn)
         if not _inside(lat, lon, bbox):
             continue
-        p = place_from_tags(oid, tags, lat, lon)
+        hv = (lambda name: to_hanviet(name, hanviet_table)) if hanviet_table else None
+        p = place_from_tags(oid, tags, lat, lon, hanviet=hv)
         if p is not None:
             places[oid] = p
     return list(places.values())
@@ -142,22 +148,22 @@ def write_places_db(places: list[Place], out: Path) -> int:
             CREATE TABLE places(
               id INTEGER PRIMARY KEY, osm_id TEXT UNIQUE, kind TEXT NOT NULL,
               name_zh TEXT NOT NULL, name_en TEXT, pinyin TEXT NOT NULL,
-              lat REAL NOT NULL, lon REAL NOT NULL, address_zh TEXT, tags_json TEXT);
+              lat REAL NOT NULL, lon REAL NOT NULL, address_zh TEXT, tags_json TEXT, hanviet TEXT);
             CREATE INDEX places_kind ON places(kind);
             CREATE VIRTUAL TABLE places_fts USING fts5(
-              name_zh_chars, name_en, pinyin, tokenize='unicode61 remove_diacritics 2');
+              name_zh_chars, name_en, pinyin, hanviet, tokenize='unicode61 remove_diacritics 2');
             CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT);
             """
         )
         for p in places:
             cur = con.execute(
-                "INSERT INTO places(osm_id, kind, name_zh, name_en, pinyin, lat, lon, address_zh, tags_json)"
-                " VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO places(osm_id, kind, name_zh, name_en, pinyin, lat, lon, address_zh, tags_json, hanviet)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?)",
                 astuple(p),
             )
             con.execute(
-                "INSERT INTO places_fts(rowid, name_zh_chars, name_en, pinyin) VALUES (?,?,?,?)",
-                (cur.lastrowid, _zh_chars(p.name_zh), p.name_en or "", p.pinyin),
+                "INSERT INTO places_fts(rowid, name_zh_chars, name_en, pinyin, hanviet) VALUES (?,?,?,?,?)",
+                (cur.lastrowid, _zh_chars(p.name_zh), p.name_en or "", p.pinyin, fold(p.hanviet) if p.hanviet else ""),
             )
         con.executemany(
             "INSERT INTO meta(key, value) VALUES (?,?)",

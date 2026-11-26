@@ -11,7 +11,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import functools
+
 from .catalog import build_catalog
+from .hanviet import load_unihan
+from .places import extract_places
 from .config import load_city
 from .pack import build_pack, next_version, read_manifest, sha256_file, validate_pack
 
@@ -26,12 +30,16 @@ def _version_key(v: str) -> tuple[int, int]:
 def cmd_build(args) -> int:
     day = datetime.now(timezone.utc).strftime("%Y%m%d")
     failed = False
+    table = load_unihan(Path(args.unihan)) if args.unihan and Path(args.unihan).exists() else None
+    if args.unihan and table is None:
+        print(f"  CẢNH BÁO: không thấy {args.unihan} — gói sẽ không có âm Hán-Việt", file=sys.stderr)
+    places_extractor = functools.partial(extract_places, hanviet_table=table)
     for cfg in args.cities:
         city = load_city(Path(cfg))
         # CI: mỗi lần chạy một số riêng (github.run_number) để không ghi đè gói đã phát hành trong cùng ngày
         version = f"{day}.{args.version_suffix}" if args.version_suffix else next_version(Path(args.out), city.slug, day)
         print(f"Đang dựng {city.slug} {version} …", flush=True)
-        z = build_pack(city, Path(args.pbf), Path(args.out), version)
+        z = build_pack(city, Path(args.pbf), Path(args.out), version, places_extractor=places_extractor)
         errors = validate_pack(z, city, max_mb=args.max_mb)
         size_mb = z.stat().st_size / (1 << 20)
         if errors:
@@ -68,6 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--pbf", required=True)
     b.add_argument("--out", default="dist")
     b.add_argument("--max-mb", type=int, default=400)
+    b.add_argument("--unihan", help="đường dẫn Unihan_Readings.txt (âm Hán-Việt)")
     b.add_argument("--version-suffix", help="số tăng dần (vd github.run_number) → phiên bản YYYYMMDD.<số>")
     b.set_defaults(func=cmd_build)
     c = sub.add_parser("catalog", help="dựng catalog.json từ các gói mới nhất trong thư mục")
