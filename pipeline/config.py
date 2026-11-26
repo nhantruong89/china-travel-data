@@ -25,6 +25,10 @@ class CityConfig:
     has_metro: bool
     min_places: int = 200
     featured: tuple[str, ...] = ()
+    #: Gói phải có ít nhất chừng này ga (phát hiện dữ liệu OSM thiếu).
+    min_metro_stations: int = 50
+    #: Quy tắc giá vé theo quãng đường: {base_yuan, base_km, steps_km, then_every_km, source}.
+    metro_fare: dict | None = None
 
 
 def load_city(path: Path) -> CityConfig:
@@ -57,6 +61,13 @@ def load_city(path: Path) -> CityConfig:
     if not isinstance(min_places, int) or min_places < 0:
         raise ConfigError(f"{path.name}: min_places phải là số nguyên không âm")
 
+    min_metro = raw.get("min_metro_stations", 50)
+    if not isinstance(min_metro, int) or min_metro < 0:
+        raise ConfigError(f"{path.name}: min_metro_stations phải là số nguyên không âm")
+    fare = raw.get("metro_fare")
+    if fare is not None:
+        _check_fare(fare, path.name)
+
     return CityConfig(
         slug=raw["slug"],
         name_vi=raw["name_vi"],
@@ -68,4 +79,16 @@ def load_city(path: Path) -> CityConfig:
         has_metro=raw["has_metro"],
         min_places=min_places,
         featured=tuple(raw.get("featured") or ()),
+        min_metro_stations=min_metro,
+        metro_fare=fare,
     )
+
+
+def _check_fare(fare, name: str) -> None:
+    def positive(v) -> bool:
+        return isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0
+    ok = (isinstance(fare, dict) and positive(fare.get("base_yuan")) and positive(fare.get("base_km"))
+          and isinstance(fare.get("steps_km"), list) and all(positive(v) for v in fare["steps_km"])
+          and positive(fare.get("then_every_km")) and isinstance(fare.get("source"), str) and fare["source"])
+    if not ok:
+        raise ConfigError(f"{name}: metro_fare cần base_yuan, base_km, steps_km (danh sách số dương), then_every_km, source")

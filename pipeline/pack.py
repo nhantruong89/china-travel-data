@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Callable
 
 from .config import CityConfig
+from .metro import build_metro
 from .places import Place, extract_places, write_places_db
 
 PACK_FILES = ("map.mbtiles", "places.sqlite")
@@ -73,6 +74,7 @@ def build_pack(
     tiles_builder: Callable[[Path, tuple, Path], None] = planetiler_tiles,
     extractor: Callable[[Path, tuple, Path], None] = osmium_extract,
     places_extractor: Callable[[Path, tuple], list[Place]] = extract_places,
+    metro_builder: Callable[[Path, tuple, int], dict] = build_metro,
 ) -> Path:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -82,6 +84,14 @@ def build_pack(
         extractor(Path(source_pbf), city.bbox, city_pbf)
         tiles_builder(city_pbf, city.bbox, work / "map.mbtiles")
         count = write_places_db(places_extractor(city_pbf, city.bbox), work / "places.sqlite")
+        files = list(PACK_FILES)
+        metro_stations = 0
+        if city.has_metro:
+            net = metro_builder(city_pbf, city.bbox, city.min_metro_stations)
+            net["fare"] = city.metro_fare
+            (work / "metro.json").write_text(json.dumps(net, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+            files.append("metro.json")
+            metro_stations = len(net["stations"])
 
         manifest = {
             "schema": 1,
@@ -96,9 +106,10 @@ def build_pack(
             "bbox": list(city.bbox),
             "has_metro": city.has_metro,
             "place_count": count,
+            "metro_station_count": metro_stations,
             "files": {
                 name: {"bytes": (work / name).stat().st_size, "sha256": sha256_file(work / name)}
-                for name in PACK_FILES
+                for name in files
             },
         }
         (work / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -110,6 +121,8 @@ def build_pack(
             zf.write(work / "manifest.json", "manifest.json", compress_type=zipfile.ZIP_DEFLATED)
             zf.write(work / "map.mbtiles", "map.mbtiles", compress_type=zipfile.ZIP_STORED)
             zf.write(work / "places.sqlite", "places.sqlite", compress_type=zipfile.ZIP_DEFLATED)
+            if "metro.json" in files:
+                zf.write(work / "metro.json", "metro.json", compress_type=zipfile.ZIP_DEFLATED)
         partial.replace(zip_path)
     return zip_path
 
@@ -128,13 +141,14 @@ def validate_pack(zip_path: Path, city: CityConfig, max_mb: int = 400) -> list[s
 
     with zipfile.ZipFile(zip_path) as zf, tempfile.TemporaryDirectory() as tmp:
         names = set(zf.namelist())
-        missing = {"manifest.json", *PACK_FILES} - names
+        required = {"manifest.json", *PACK_FILES} | ({"metro.json"} if city.has_metro else set())
+        missing = required - names
         if missing:
             return errors + [f"{city.slug}: thiếu file trong gói: {', '.join(sorted(missing))}"]
         manifest = json.loads(zf.read("manifest.json"))
         zf.extractall(tmp)
-        for name in PACK_FILES:
-            if sha256_file(Path(tmp) / name) != manifest["files"][name]["sha256"]:
+        for name in sorted(required - {"manifest.json"}):
+            if name not in manifest["files"] or sha256_file(Path(tmp) / name) != manifest["files"][name]["sha256"]:
                 errors.append(f"{city.slug}: sha256 của {name} không khớp manifest")
 
         con = sqlite3.connect(Path(tmp) / "places.sqlite")

@@ -59,3 +59,40 @@ def test_all_city_files_load():
     assert {f.stem for f in files} >= {"shanghai", "suzhou", "hangzhou", "zhouzhuang"}
     for f in files:
         load_city(f)
+
+
+def test_metro_fare_and_min_stations(tmp_path):
+    from pipeline.config import load_city
+    p = tmp_path / "sh.yaml"
+    p.write_text("""slug: sh
+name_vi: A
+name_zh: B
+name_en: C
+region: r
+region_name_vi: V
+bbox: [121, 31, 122, 32]
+has_metro: true
+min_metro_stations: 300
+metro_fare: {base_yuan: 3, base_km: 4, steps_km: [4, 4, 4, 7, 7, 10, 10], then_every_km: 15, source: "x"}
+""", encoding="utf-8")
+    c = load_city(p)
+    assert c.min_metro_stations == 300
+    assert c.metro_fare["steps_km"] == [4, 4, 4, 7, 7, 10, 10]
+
+
+def test_bad_metro_fare_rejected(tmp_path):
+    import pytest
+    from pipeline.config import ConfigError, load_city
+    p = tmp_path / "sh.yaml"
+    p.write_text("""slug: sh
+name_vi: A
+name_zh: B
+name_en: C
+region: r
+region_name_vi: V
+bbox: [121, 31, 122, 32]
+has_metro: true
+metro_fare: {base_yuan: 3}
+""", encoding="utf-8")
+    with pytest.raises(ConfigError):
+        load_city(p)

@@ -88,3 +88,64 @@ def test_planetiler_command_downloads_and_caches_sources(tmp_path):
     assert "--download" in cmd
     assert f"--download_dir={TOOLS / 'sources'}" in cmd
     assert "--bounds=1.0,2.0,3.0,4.0" in cmd
+
+
+FAKE_NET = {"schema": 1, "lines": [{"id": "1"}], "stations": [{"id": "s0"}, {"id": "s1"}], "edges": [], "routes": []}
+FARE = {"base_yuan": 3, "base_km": 4, "steps_km": [4, 4, 4, 7, 7, 10, 10], "then_every_km": 15, "source": "test"}
+
+
+def test_metro_pack_includes_metro_json_with_fare(tmp_path):
+    city = CityConfig(**{**CITY.__dict__, "has_metro": True, "min_metro_stations": 2, "metro_fare": FARE})
+    calls = []
+    def metro(pbf, bbox, min_stations):
+        calls.append(min_stations)
+        return dict(FAKE_NET)
+    def extractor(src, bbox, out):
+        out.write_bytes(b"pbf")
+    z = build_pack(city, tmp_path / "china.osm.pbf", tmp_path / "dist", "20261201",
+                   tiles_builder=lambda a, b, out: out.write_bytes(b"\0"), extractor=extractor,
+                   places_extractor=lambda pbf, bbox: _places(), metro_builder=metro)
+    assert calls == [2]
+    with zipfile.ZipFile(z) as zf:
+        assert "metro.json" in zf.namelist()
+        net = json.loads(zf.read("metro.json"))
+        m = json.loads(zf.read("manifest.json"))
+    assert net["fare"] == FARE and len(net["stations"]) == 2
+    with zipfile.ZipFile(z) as zf:
+        assert m["files"]["metro.json"]["sha256"] == hashlib.sha256(zf.read("metro.json")).hexdigest()
+    assert m["metro_station_count"] == 2
+
+
+def test_city_without_metro_has_no_metro_json(tmp_path):
+    with zipfile.ZipFile(_build(tmp_path)) as zf:
+        assert "metro.json" not in zf.namelist()
+
+
+def _metro_pack(tmp_path):
+    city = CityConfig(**{**CITY.__dict__, "has_metro": True, "min_metro_stations": 2, "metro_fare": FARE})
+    z = build_pack(city, tmp_path / "china.osm.pbf", tmp_path / "dist", "20261201",
+                   tiles_builder=lambda a, b, out: out.write_bytes(b"\0"), extractor=lambda s, b, o: o.write_bytes(b"pbf"),
+                   places_extractor=lambda pbf, bbox: _places(), metro_builder=lambda p, b, m: dict(FAKE_NET))
+    return city, z
+
+
+def test_validate_metro_pack_ok(tmp_path):
+    city, z = _metro_pack(tmp_path)
+    assert validate_pack(z, city) == []
+
+
+def test_validate_metro_checksum_tamper(tmp_path):
+    city, z = _metro_pack(tmp_path)
+    with zipfile.ZipFile(z) as zf:
+        parts = {n: zf.read(n) for n in zf.namelist()}
+    parts["metro.json"] = b'{"stations":[]}'
+    with zipfile.ZipFile(z, "w") as zf:
+        for n, data in parts.items():
+            zf.writestr(n, data)
+    assert any("metro.json" in e for e in validate_pack(z, city))
+
+
+def test_validate_metro_city_missing_metro_json(tmp_path):
+    city = CityConfig(**{**CITY.__dict__, "has_metro": True})
+    z = _build(tmp_path)  # dựng như thành phố không có metro
+    assert any("metro.json" in e for e in validate_pack(z, city))
