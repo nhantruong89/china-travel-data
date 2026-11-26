@@ -7,7 +7,7 @@ NET = {
         {"id": "a", "name_zh": "甲", "hanviet": "Giáp", "name_en": "A"},
         {"id": "b", "name_zh": "乙", "hanviet": None, "name_en": "B"},
         {"id": "c", "name_zh": "丙", "hanviet": "Bính", "name_en": None},
-        {"id": "d", "name_zh": "丁", "hanviet": "Đinh", "name_en": "D"},
+        {"id": "d", "name_zh": "丁馆", "hanviet": "Đinh 馆", "name_en": "D"},
     ],
     "edges": [{"a": "a", "b": "b", "line": "1", "km": 1.5}, {"a": "b", "b": "c", "line": "1", "km": 2.0}],
 }
@@ -19,9 +19,10 @@ def test_shortest_km_and_disconnected():
 
 
 def test_report_flags_gaps():
-    text = "\n".join(report(NET, [("甲", "丙"), ("甲", "丁"), ("甲", "戊")]))
+    text = "\n".join(report(NET, [("甲", "丙"), ("甲", "丁馆"), ("甲", "戊")]))
     assert "nhóm liên thông 2" in text
     assert "ga thiếu Hán-Việt: 1 ['乙']" in text
     assert "甲 → 丙: 3.5 km" in text
-    assert "甲 → 丁: không nối" in text
+    assert "甲 → 丁馆: không nối" in text
     assert "thiếu ga ['戊']" in text
+    assert "Hán-Việt còn chữ Hán: 1 ['Đinh 馆']" in text

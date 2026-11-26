@@ -1,0 +1,5 @@
+# Unihan_Variants.txt (trích)
+U+9986	kTraditionalVariant	U+9928
+U+9928	kSimplifiedVariant	U+9986
+U+534E	kTraditionalVariant	U+83EF
+U+6EE9	kTraditionalVariant	U+7058

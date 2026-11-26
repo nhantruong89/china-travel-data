@@ -1,0 +1,3 @@
+U+9928	kVietnamese	quán
+U+83EF	kVietnamese	hoa
+U+7058	kVietnamese	than

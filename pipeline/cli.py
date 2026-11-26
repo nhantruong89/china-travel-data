@@ -14,7 +14,7 @@ from pathlib import Path
 import functools
 
 from .catalog import build_catalog
-from .hanviet import load_unihan, to_hanviet
+from .hanviet import EXTRA_READINGS, load_unihan, to_hanviet
 from .metro import build_metro
 from .places import extract_places
 from .config import load_city
@@ -31,7 +31,8 @@ def _version_key(v: str) -> tuple[int, int]:
 def cmd_build(args) -> int:
     day = datetime.now(timezone.utc).strftime("%Y%m%d")
     failed = False
-    table = load_unihan(Path(args.unihan)) if args.unihan and Path(args.unihan).exists() else None
+    table = (load_unihan(Path(args.unihan), variants=Path(args.unihan).with_name("Unihan_Variants.txt"), extra=EXTRA_READINGS)
+             if args.unihan and Path(args.unihan).exists() else None)
     if args.unihan and table is None:
         print(f"  CẢNH BÁO: không thấy {args.unihan} — gói sẽ không có âm Hán-Việt", file=sys.stderr)
     places_extractor = functools.partial(extract_places, hanviet_table=table)
