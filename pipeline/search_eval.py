@@ -50,7 +50,7 @@ CASES: dict[str, list[tuple[str, str]]] = {
     ],
     "shanghai": [
         ("Ngoại Than", "外滩"), ("Dự Viên", "豫园"), ("Tĩnh An Tự", "静安寺"), ("chùa Tĩnh An", "静安寺"),
-        ("Ngọc Phật Tự", "玉佛寺"), ("chùa Ngọc Phật", "玉佛寺"), ("Nam Kinh Đông Lộ", "南京东路"),
+        ("Ngọc Phật Tự", "玉佛"), ("chùa Ngọc Phật", "玉佛"), ("Nam Kinh Đông Lộ", "南京东路"),
         ("Điền Tử Phường", "田子坊"), ("Tân Thiên Địa", "新天地"), ("Chu Gia Giác", "朱家角"), ("Đông Phương Minh Châu", "东方明珠"),
         ("Hồng Kiều Hỏa Xa Trạm", "虹桥火车站"), ("Phố Đông Cơ Trường", "浦东机场"), ("sân bay Phố Đông", "浦东"),
         ("Nhân Dân Quảng Trường", "人民广场"), ("Long Hoa Tự", "龙华寺"), ("Thượng Hải Bác Vật Quán", "上海博物馆"),
@@ -69,8 +69,14 @@ def queries(text: str) -> list[str]:
             name = " ".join(words[len(cat):])
             out.append("hanviet : (" + " OR ".join(f'"{name} {s}"' for s in suffixes) + ")")
             out.append(f'hanviet : "{name}"')
-            break
+            return out
+    if len(words) >= 3 and words[-1] in CATEGORY_SUFFIXES:
+        out.append(f'hanviet : "{" ".join(words[:-1])}"')
     return out
+
+
+# Hậu tố loại cuối tên Hán-Việt (PlaceSearch.categorySuffixes): "Ngọc Phật Tự" → thử "Ngọc Phật" (玉佛禅寺).
+CATEGORY_SUFFIXES = {"tu", "thap", "vien", "ho", "son", "kieu", "nhai", "lo", "tram", "mieu", "cac", "dinh", "quan", "dien", "am"}
 
 
 def top(con: sqlite3.Connection, text: str, n: int = 5) -> list[str]:
