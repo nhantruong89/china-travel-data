@@ -14,7 +14,7 @@ from pathlib import Path
 import functools
 
 from .catalog import build_catalog
-from .hanviet import EXTRA_READINGS, load_unihan, to_hanviet
+from .hanviet import build_table, to_hanviet
 from .metro import build_metro
 from .places import extract_places
 from .config import load_city
@@ -31,10 +31,12 @@ def _version_key(v: str) -> tuple[int, int]:
 def cmd_build(args) -> int:
     day = datetime.now(timezone.utc).strftime("%Y%m%d")
     failed = False
-    table = (load_unihan(Path(args.unihan), variants=Path(args.unihan).with_name("Unihan_Variants.txt"), extra=EXTRA_READINGS)
-             if args.unihan and Path(args.unihan).exists() else None)
-    if args.unihan and table is None:
-        print(f"  CẢNH BÁO: không thấy {args.unihan} — gói sẽ không có âm Hán-Việt", file=sys.stderr)
+    unihan = Path(args.unihan) if args.unihan else None
+    phienam = Path(args.phienam) if args.phienam else None
+    for label, path in (("Unihan", unihan), ("phiên âm", phienam)):
+        if path is not None and not path.exists():
+            print(f"  CẢNH BÁO: không thấy {label} {path} — âm Hán-Việt sẽ thiếu", file=sys.stderr)
+    table = build_table(unihan, phienam) if (unihan or phienam) else None
     places_extractor = functools.partial(extract_places, hanviet_table=table)
     metro_builder = functools.partial(build_metro, hanviet=(lambda t: to_hanviet(t, table)) if table else None)
     for cfg in args.cities:
@@ -82,7 +84,8 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--pbf", required=True)
     b.add_argument("--out", default="dist")
     b.add_argument("--max-mb", type=int, default=400)
-    b.add_argument("--unihan", help="đường dẫn Unihan_Readings.txt (âm Hán-Việt)")
+    b.add_argument("--unihan", help="đường dẫn Unihan_Readings.txt (âm Hán-Việt dự phòng)")
+    b.add_argument("--phienam", help="đường dẫn phienam.txt (âm Hán-Việt chính, xem hanviet.PHIENAM_URL)")
     b.add_argument("--version-suffix", help="số tăng dần (vd github.run_number) → phiên bản YYYYMMDD.<số>")
     b.set_defaults(func=cmd_build)
     c = sub.add_parser("catalog", help="dựng catalog.json từ các gói mới nhất trong thư mục")
