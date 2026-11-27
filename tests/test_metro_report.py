@@ -4,7 +4,7 @@ from pipeline.metro_report import report, shortest_km
 NET = {
     "lines": [{"id": "1", "name_zh": "1号线", "name_vi": "Tuyến 1", "colour": None}],
     "stations": [
-        {"id": "a", "name_zh": "甲", "hanviet": "Giáp", "name_en": "A"},
+        {"id": "a", "name_zh": "甲", "hanviet": "Giáp", "name_en": "A", "exits": [{"ref": "1", "lat": 0, "lon": 0}]},
         {"id": "b", "name_zh": "乙", "hanviet": None, "name_en": "B"},
         {"id": "c", "name_zh": "丙", "hanviet": "Bính", "name_en": None},
         {"id": "d", "name_zh": "丁馆", "hanviet": "Đinh 馆", "name_en": "D"},
@@ -26,3 +26,8 @@ def test_report_flags_gaps():
     assert "甲 → 丁馆: không nối" in text
     assert "thiếu ga ['戊']" in text
     assert "Hán-Việt còn chữ Hán: 1 ['Đinh 馆']" in text
+
+
+def test_report_counts_stations_with_exits():
+    text = "\n".join(report(NET, []))
+    assert "ga có cửa ra: 1/4" in text

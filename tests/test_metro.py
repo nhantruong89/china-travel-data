@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from pipeline.metro import MetroError, build_metro, chain_ways, haversine_km, segment_km, station_key
+from pipeline.metro import MetroError, build_metro, chain_ways, exit_ref, haversine_km, segment_km, station_key
 
 FIX = Path(__file__).parent / "fixtures" / "mini_metro.osm"
 BBOX = (121.0, 31.0, 122.0, 31.5)
@@ -70,3 +70,21 @@ def test_chain_ways_flips_first_way_when_needed():
     a = [(0.0, 1.0), (0.0, 0.0)]  # đoạn đầu lưu ngược
     b = [(0.0, 1.0), (0.0, 2.0)]
     assert chain_ways([a, b]) == [(0.0, 0.0), (0.0, 1.0), (0.0, 2.0)]
+
+
+def test_exit_ref_normalises_chinese_suffix():
+    assert exit_ref("1号口") == "1"
+    assert exit_ref("12") == "12"
+    assert exit_ref("A2出口") == "A2"
+    assert exit_ref(" ") is None
+
+
+def test_exits_attached_to_nearest_station():
+    net = build_metro(FIX, BBOX, min_stations=5)
+    by = {s["name_zh"]: s for s in net["stations"]}
+    assert [e["ref"] for e in by["人民广场"]["exits"]] == ["1", "12"], "sắp theo số; cửa không số bị bỏ"
+    assert [e["ref"] for e in by["龙阳路"]["exits"]] == ["3"]
+    assert "exits" not in by["莘庄"], "ga không có cửa ra trong dữ liệu: không thêm khoá"
+    assert all(e["ref"] != "9" for s in net["stations"] for e in s.get("exits", [])), "cửa cách ga quá xa bị bỏ"
+    e = by["人民广场"]["exits"][0]
+    assert set(e) == {"ref", "lat", "lon"} and e["lat"] == 31.1995

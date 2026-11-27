@@ -70,6 +70,8 @@ def report(net: dict, pairs: list[tuple[str, str]]) -> list[str]:
     partial = [s["hanviet"] for s in net["stations"] if s.get("hanviet") and re.search(r"[\u3400-\u9fff]", s["hanviet"])]
     out.append(f"Hán-Việt còn chữ Hán: {len(partial)} {partial[:15]}")
     out.append(f"ga thiếu tên Anh: {sum(1 for s in net['stations'] if not s.get('name_en'))}")
+    with_exits = [s for s in net["stations"] if s.get("exits")]
+    out.append(f"ga có cửa ra: {len(with_exits)}/{len(net['stations'])} · tổng cửa {sum(len(s['exits']) for s in with_exits)}")
     for a, b in pairs:
         if a in by_zh and b in by_zh:
             d = shortest_km(net, by_zh[a]["id"], by_zh[b]["id"])
