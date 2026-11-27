@@ -109,3 +109,21 @@ def test_extract_multipolygon_relation():
     places = extract_places(Path(__file__).parent / "fixtures" / "mini_area.osm", (121.0, 31.0, 122.0, 32.0))
     assert [(p.osm_id, p.name_zh, p.kind) for p in places] == [("r300", "来福士广场", "shop")]
     assert 31.23 < places[0].lat < 31.24 and 121.47 < places[0].lon < 121.48
+
+
+def test_places_of_worship_are_sights():
+    # 寒山寺, 净慈寺, 玄妙观 chỉ có amenity=place_of_worship trên OSM.
+    assert classify({"amenity": "place_of_worship", "religion": "buddhist"}) == "see"
+    assert classify({"amenity": "place_of_worship", "religion": "taoist"}) == "see"
+
+
+def test_named_pedestrian_streets_are_sights_once_per_name():
+    # 平江路, 白堤: phố đi bộ / đê đi bộ nổi tiếng, trên OSM chỉ là highway=pedestrian, chia nhiều đoạn.
+    from pipeline.places import dedupe_streets
+    assert classify({"highway": "pedestrian"}) == "see"
+    assert classify({"highway": "residential"}) is None
+    a = Place("w1", "see", "平江路", None, "", 31.31, 120.63, None, '{"highway": "pedestrian"}')
+    b = Place("w2", "see", "平江路", None, "", 31.32, 120.63, None, '{"highway": "pedestrian"}')
+    c = Place("n3", "see", "平江路", None, "", 31.31, 120.63, None, '{"tourism": "attraction"}')
+    d = Place("w4", "see", "白堤", None, "", 30.26, 120.15, None, '{"highway": "pedestrian"}')
+    assert [p.osm_id for p in dedupe_streets([a, b, c, d])] == ["w1", "n3", "w4"]

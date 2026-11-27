@@ -67,6 +67,12 @@ def classify(tags: dict[str, str]) -> Kind | None:
         return "stay"
     if tourism in SEE_TOURISM or "historic" in tags or tags.get("leisure") in SEE_LEISURE:
         return "see"
+    # Chùa, đạo quán, nhà thờ: nhiều nơi nổi tiếng (寒山寺, 净慈寺, 玄妙观) chỉ có thẻ này.
+    if amenity == "place_of_worship":
+        return "see"
+    # Phố đi bộ / đê đi bộ (平江路, 白堤). Mỗi tên giữ một đoạn — xem dedupe_streets.
+    if tags.get("highway") == "pedestrian":
+        return "see"
     return None
 
 
@@ -148,7 +154,20 @@ def extract_places(osm_path: Path, bbox, hanviet_table: dict[str, str] | None = 
         p = place_from_tags(oid, tags, lat, lon, hanviet=hv)
         if p is not None:
             places[oid] = p
-    return list(places.values())
+    return dedupe_streets(list(places.values()))
+
+
+def dedupe_streets(places: list[Place]) -> list[Place]:
+    """Phố đi bộ trên OSM chia nhiều đoạn cùng tên: chỉ giữ đoạn đầu tiên của mỗi tên."""
+    seen: set[str] = set()
+    out: list[Place] = []
+    for p in places:
+        if '"highway": "pedestrian"' in p.tags_json:
+            if p.name_zh in seen:
+                continue
+            seen.add(p.name_zh)
+        out.append(p)
+    return out
 
 
 def _zh_chars(text: str) -> str:

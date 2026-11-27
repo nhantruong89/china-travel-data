@@ -48,10 +48,12 @@ jobs:
             curl -fL --retry 3 -o Unihan.zip https://www.unicode.org/Public/UCD/latest/ucd/Unihan.zip
             unzip -o -q Unihan.zip Unihan_Readings.txt Unihan_Variants.txt
           fi
+          [ -f phienam-5f79922.txt ] || curl -fL --retry 3 -o phienam-5f79922.txt \
+            https://raw.githubusercontent.com/ryanphung/chinese-hanviet-cognates/5f79922e2223105547e9ad7d2819949dd508407b/inputs/phienam.txt
           [ -f planetiler.jar ] || curl -fL --retry 3 -o planetiler.jar \
             https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar
       - name: Build and validate packs
-        run: python -m pipeline.cli build cities/*.yaml --pbf ~/.cache/china-travel/china-latest.osm.pbf --out dist --version-suffix ${{ github.run_number }} --unihan ~/.cache/china-travel/Unihan_Readings.txt
+        run: python -m pipeline.cli build cities/*.yaml --pbf ~/.cache/china-travel/china-latest.osm.pbf --out dist --version-suffix ${{ github.run_number }} --unihan ~/.cache/china-travel/Unihan_Readings.txt --phienam ~/.cache/china-travel/phienam-5f79922.txt
       - name: Build catalog
         run: python -m pipeline.cli catalog dist
       - name: Pack sizes
@@ -61,6 +63,7 @@ jobs:
           mkdir -p review
           for z in dist/*.zip; do
             unzip -p "$z" metro.json > "review/$(basename "$z" .zip)-metro.json" 2>/dev/null || rm -f "review/$(basename "$z" .zip)-metro.json"
+            unzip -p "$z" places.sqlite > "review/$(basename "$z" .zip)-places.sqlite"
           done
           ls -l review >> "$GITHUB_STEP_SUMMARY" || true
           for f in review/*-metro.json; do python -m pipeline.metro_report "$f"; done
