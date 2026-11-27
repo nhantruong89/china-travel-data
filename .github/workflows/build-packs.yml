@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: build-packs
@@ -67,6 +68,14 @@ jobs:
           done
           ls -l review >> "$GITHUB_STEP_SUMMARY" || true
           for f in review/*-metro.json; do python -m pipeline.metro_report "$f"; done
+      - name: Vietnamese search check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m pipeline.search_eval dist/*.zip | tee search-eval.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -F body=@search-eval.md >/dev/null
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: metro-review
