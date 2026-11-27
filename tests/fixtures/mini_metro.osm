@@ -44,4 +44,6 @@
   <node id="22" lat="31.2003" lon="121.4495"><tag k="railway" v="subway_entrance"/></node>
   <node id="23" lat="31.1803" lon="121.4504"><tag k="railway" v="subway_entrance"/><tag k="ref" v="3"/></node>
   <node id="24" lat="31.2400" lon="121.4800"><tag k="railway" v="subway_entrance"/><tag k="ref" v="9"/></node>
+  <!-- Cửa cách tâm ga ~450 m (ga lớn): vẫn nhận; tên kèm tên ga -->
+  <node id="25" lat="31.2040" lon="121.4510"><tag k="railway" v="subway_entrance"/><tag k="name" v="人民广场站20号口"/></node>
 </osm>

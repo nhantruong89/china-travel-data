@@ -77,12 +77,17 @@ def test_exit_ref_normalises_chinese_suffix():
     assert exit_ref("12") == "12"
     assert exit_ref("A2出口") == "A2"
     assert exit_ref(" ") is None
+    # Tên cửa trong OSM hay kèm tên ga hoặc tiếng Anh: chỉ lấy số cửa.
+    assert exit_ref("人民广场站1号口") == "1"
+    assert exit_ref("Exit 12") == "12"
+    assert exit_ref("B2出入口") == "B2"
+    assert exit_ref("东出口") is None, "không có số → bỏ"
 
 
 def test_exits_attached_to_nearest_station():
     net = build_metro(FIX, BBOX, min_stations=5)
     by = {s["name_zh"]: s for s in net["stations"]}
-    assert [e["ref"] for e in by["人民广场"]["exits"]] == ["1", "12"], "sắp theo số; cửa không số bị bỏ"
+    assert [e["ref"] for e in by["人民广场"]["exits"]] == ["1", "12", "20"], "sắp theo số; cửa không số bị bỏ; ga lớn tới 500 m"
     assert [e["ref"] for e in by["龙阳路"]["exits"]] == ["3"]
     assert "exits" not in by["莘庄"], "ga không có cửa ra trong dữ liệu: không thêm khoá"
     assert all(e["ref"] != "9" for s in net["stations"] for e in s.get("exits", [])), "cửa cách ga quá xa bị bỏ"

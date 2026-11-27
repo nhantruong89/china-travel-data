@@ -100,19 +100,18 @@ def _line_names(ref: str) -> tuple[str, str, str]:
     return ref, ref, ref
 
 
-EXIT_RADIUS_KM = 0.35
+EXIT_RADIUS_KM = 0.5  # ga đổi tuyến lớn (人民广场) có cửa cách tâm ga hơn 350 m
+
+
+_EXIT_RE = re.compile(r"([A-Za-z]?\d+[A-Za-z]?)\s*(?:号)?(?:出入口|出口|口)?\s*$")
 
 
 def exit_ref(raw: str | None) -> str | None:
-    """Số cửa ra: "1号口" → "1", "A2出口" → "A2"."""
+    """Số cửa ra: "1号口" → "1", "人民广场站1号口" → "1", "Exit 12" → "12", "A2出口" → "A2"; không có số → None."""
     if not raw:
         return None
-    ref = raw.strip()
-    for suffix in ("出口", "号口", "口", "号"):
-        if ref.endswith(suffix):
-            ref = ref[: -len(suffix)].strip()
-            break
-    return ref or None
+    m = _EXIT_RE.search(raw.strip())
+    return m.group(1).upper() if m else None
 
 
 def _exit_sort(ref: str):
@@ -220,7 +219,7 @@ def build_metro(osm_path: Path, bbox, min_stations: int, hanviet: Callable[[str]
             item["hanviet"] = hanviet(s["name_zh"])
         out_stations.append(item)
 
-    # Cửa ra: gắn vào ga gần nhất trong 350 m; trùng số thì giữ cửa gần ga hơn.
+    # Cửa ra: gắn vào ga gần nhất trong 500 m; trùng số thì giữ cửa gần ga hơn.
     for lat, lon, ref in entrances:
         if not inside(lat, lon) or not out_stations:
             continue
