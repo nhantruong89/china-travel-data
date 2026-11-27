@@ -38,4 +38,12 @@
     <member type="node" ref="1" role="stop"/><member type="node" ref="3" role="stop"/>
     <tag k="type" v="route"/><tag k="route" v="train"/><tag k="ref" v="G1"/>
   </relation>
+  <!-- Cửa ra (railway=subway_entrance + ref): hai cửa của 人民广场, một cửa của 龙阳路, một cửa không số, một cửa quá xa ga -->
+  <node id="20" lat="31.2010" lon="121.4510"><tag k="railway" v="subway_entrance"/><tag k="ref" v="12"/></node>
+  <node id="21" lat="31.1995" lon="121.4490"><tag k="railway" v="subway_entrance"/><tag k="ref" v="1号口"/></node>
+  <node id="22" lat="31.2003" lon="121.4495"><tag k="railway" v="subway_entrance"/></node>
+  <node id="23" lat="31.1803" lon="121.4504"><tag k="railway" v="subway_entrance"/><tag k="ref" v="3"/></node>
+  <node id="24" lat="31.2400" lon="121.4800"><tag k="railway" v="subway_entrance"/><tag k="ref" v="9"/></node>
+  <!-- Cửa cách tâm ga ~450 m (ga lớn): vẫn nhận; tên kèm tên ga -->
+  <node id="25" lat="31.2040" lon="121.4510"><tag k="railway" v="subway_entrance"/><tag k="name" v="人民广场站20号口"/></node>
 </osm>

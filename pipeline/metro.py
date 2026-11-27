@@ -100,6 +100,25 @@ def _line_names(ref: str) -> tuple[str, str, str]:
     return ref, ref, ref
 
 
+EXIT_RADIUS_KM = 0.5  # ga đổi tuyến lớn (人民广场) có cửa cách tâm ga hơn 350 m
+
+
+_EXIT_RE = re.compile(r"([A-Za-z]?\d+[A-Za-z]?)\s*(?:号)?(?:出入口|出口|口)?\s*$")
+
+
+def exit_ref(raw: str | None) -> str | None:
+    """Số cửa ra: "1号口" → "1", "人民广场站1号口" → "1", "Exit 12" → "12", "A2出口" → "A2"; không có số → None."""
+    if not raw:
+        return None
+    m = _EXIT_RE.search(raw.strip())
+    return m.group(1).upper() if m else None
+
+
+def _exit_sort(ref: str):
+    digits = "".join(c for c in ref if c.isdigit())
+    return (int(digits) if digits else 10**6, ref)
+
+
 def build_metro(osm_path: Path, bbox, min_stations: int, hanviet: Callable[[str], str | None] | None = None) -> dict:
     import osmium
 
@@ -125,7 +144,12 @@ def build_metro(osm_path: Path, bbox, min_stations: int, hanviet: Callable[[str]
     want_ways = {w for r in routes for w in r.ways}
     nodes: dict[int, tuple[float, float, dict]] = {}
     ways: dict[int, list[tuple[float, float]]] = {}
+    entrances: list[tuple[float, float, str]] = []
     for obj in osmium.FileProcessor(str(osm_path)).with_locations():
+        if obj.is_node() and obj.location.valid() and obj.tags.get("railway") == "subway_entrance":
+            ref = exit_ref(obj.tags.get("ref") or obj.tags.get("name"))
+            if ref:
+                entrances.append((obj.location.lat, obj.location.lon, ref))
         if obj.is_node() and obj.id in want_nodes and obj.location.valid():
             nodes[obj.id] = (obj.location.lat, obj.location.lon, dict(obj.tags))
         elif obj.is_way() and obj.id in want_ways:
@@ -194,6 +218,25 @@ def build_metro(osm_path: Path, bbox, min_stations: int, hanviet: Callable[[str]
         if hanviet:
             item["hanviet"] = hanviet(s["name_zh"])
         out_stations.append(item)
+
+    # Cửa ra: gắn vào ga gần nhất trong 500 m; trùng số thì giữ cửa gần ga hơn.
+    for lat, lon, ref in entrances:
+        if not inside(lat, lon) or not out_stations:
+            continue
+        best = min(out_stations, key=lambda st: haversine_km((st["lat"], st["lon"]), (lat, lon)))
+        dist = haversine_km((best["lat"], best["lon"]), (lat, lon))
+        if dist > EXIT_RADIUS_KM:
+            continue
+        exits = best.setdefault("exits", [])
+        same = next((e for e in exits if e["ref"] == ref), None)
+        if same and haversine_km((best["lat"], best["lon"]), (same["lat"], same["lon"])) <= dist:
+            continue
+        if same:
+            exits.remove(same)
+        exits.append({"ref": ref, "lat": round(lat, 6), "lon": round(lon, 6)})
+    for st in out_stations:
+        if "exits" in st:
+            st["exits"].sort(key=lambda e: _exit_sort(e["ref"]))
     return {
         "schema": 1,
         "lines": sorted(lines.values(), key=lambda l: _line_sort(l["id"])),
